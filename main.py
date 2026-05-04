@@ -17,7 +17,11 @@ class SovereignOrchestrator:
             self.repo = None
         else:
             self.gh = Github(GITHUB_TOKEN)
-            self.repo = self.gh.get_repo(GITHUB_REPO)
+            try:
+                self.repo = self.gh.get_repo(GITHUB_REPO)
+            except Exception as e:
+                print(f"Warning: Failed to initialize GitHub repo: {e}")
+                self.repo = None
         
         self.agent_manager = AgentManager()
 
