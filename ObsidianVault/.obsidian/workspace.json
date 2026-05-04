@@ -11,10 +11,14 @@
             "id": "33b747b0625a4f33",
             "type": "leaf",
             "state": {
-              "type": "graph",
-              "state": {},
-              "icon": "lucide-git-fork",
-              "title": "มุมมองกราฟ"
+              "type": "markdown",
+              "state": {
+                "file": "02_Lessons_Learned/gemma4_model_guide.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "gemma4_model_guide"
             }
           }
         ]

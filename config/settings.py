@@ -10,6 +10,10 @@ GITHUB_REPO = os.getenv("GITHUB_REPO")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+
+# OpenRouter
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 # Local Setup
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")

@@ -1,77 +1,86 @@
 import requests
 import json
-import google.generativeai as genai
-from config.settings import GEMINI_API_KEY, OLLAMA_BASE_URL
-
-# Initialize Gemini
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+import time
+from config.settings import OLLAMA_BASE_URL, OPENROUTER_API_KEY, OPENROUTER_BASE_URL
 
 class AgentManager:
     def __init__(self):
-        self.gemini_model = "gemini-2.5-flash"
-        self.ollama_model = "phi3"  # default local model, or llama3
+        # OpenRouter Models
+        self.commander_model = "tencent/hy3-preview:free"
+        self.worker_model = "tencent/hy3-preview:free"
+
+        self.ollama_model = "gemma4:26b"
         self.ollama_available = self._check_ollama()
+        self.openrouter_available = bool(OPENROUTER_API_KEY)
+
+        if self.openrouter_available:
+            print("✅ OpenRouter API initialized")
+        else:
+            print("⚠️ OpenRouter API key not found")
 
     def _check_ollama(self) -> bool:
-        """Check if Ollama is running locally"""
         try:
             r = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=3)
-            if r.status_code == 200:
-                models = [m['name'] for m in r.json().get('models', [])]
-                print(f"✅ Ollama connected — Available models: {models}")
-                return True
+            return r.status_code == 200
         except Exception:
-            pass
-        print(f"⚠️ Ollama not available at {OLLAMA_BASE_URL} — Local agents will fallback to Cloud")
-        return False
+            return False
 
-    def run_cloud_agent(self, prompt: str, system_instruction: str = None) -> str:
-        """Runs the task on Gemini 2.5 Flash (Cloud)"""
-        try:
-            full_prompt = prompt
-            if system_instruction:
-                full_prompt = f"[System Instructions]\n{system_instruction}\n\n[Task]\n{full_prompt}"
+    def run_openrouter_agent(self, prompt: str, system_instruction: str = None, model_name: str = None) -> str:
+        if not self.openrouter_available:
+            return "Error: OpenRouter API key not configured"
 
-            model = genai.GenerativeModel(model_name=self.gemini_model)
-            response = model.generate_content(full_prompt)
-            return response.text
-        except Exception as e:
-            print(f"Error running cloud agent: {e}")
-            return f"Error: {e}"
+        model = model_name or self.worker_model
 
-    def run_local_agent(self, prompt: str, system_instruction: str = None, model: str = None) -> str:
-        """Runs the task on Ollama (Local)"""
-        model_to_use = model or self.ollama_model
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json"
+        }
+
+        messages = []
+        if system_instruction:
+            messages.append({"role": "system", "content": system_instruction})
+        messages.append({"role": "user", "content": prompt})
+
         payload = {
-            "model": model_to_use,
-            "prompt": prompt,
-            "system": system_instruction,
-            "stream": False
+            "model": model,
+            "messages": messages
         }
 
         try:
+            response = requests.post(
+                f"{OPENROUTER_BASE_URL}/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=120
+            )
+            response.raise_for_status()
+            return response.json()["choices"][0]["message"]["content"]
+        except Exception as e:
+            return f"Error: {e}"
+
+    def run_cloud_agent(self, prompt: str, system_instruction: str = None, model_name: str = None) -> str:
+        return self.run_openrouter_agent(prompt, system_instruction, model_name)
+
+    def run_local_agent(self, prompt: str, system_instruction: str = None) -> str:
+        try:
+            payload = {
+                "model": self.ollama_model,
+                "prompt": prompt,
+                "system": system_instruction,
+                "stream": False
+            }
             response = requests.post(f"{OLLAMA_BASE_URL}/api/generate", json=payload, timeout=120)
             response.raise_for_status()
-            data = response.json()
-            return data.get("response", "")
-        except requests.exceptions.RequestException as e:
-            print(f"Error running local agent: {e}")
+            return response.json().get("response", "")
+        except Exception as e:
             return f"Error: {e}"
 
     def execute_agent(self, agent_name: str, task: str, is_local: bool = False, system_prompt: str = "") -> str:
-        """
-        Executes a specific agent with its persona.
-        If local is requested but Ollama is not available, fallback to cloud.
-        """
-        use_local = is_local and self.ollama_available
+        model_to_use = self.commander_model if agent_name == "K" else self.worker_model
 
-        if use_local:
-            print(f"Executing Agent: {agent_name} | 🖥️ LOCAL (Ollama)")
+        if is_local and self.ollama_available:
+            print(f"Executing Agent: {agent_name} | 🖥️ LOCAL ({self.ollama_model})")
             return self.run_local_agent(prompt=task, system_instruction=system_prompt)
         else:
-            if is_local:
-                print(f"Executing Agent: {agent_name} | ☁️ CLOUD (Fallback — Ollama unavailable)")
-            else:
-                print(f"Executing Agent: {agent_name} | ☁️ CLOUD")
-            return self.run_cloud_agent(prompt=task, system_instruction=system_prompt)
+            print(f"Executing Agent: {agent_name} | ☁️ CLOUD ({model_to_use})")
+            return self.run_cloud_agent(prompt=task, system_instruction=system_prompt, model_name=model_to_use)
