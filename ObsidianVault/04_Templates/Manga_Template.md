@@ -28,3 +28,16 @@ A[Start] --> B[End]
   "coverUrl": ""
 }
 ```
+
+<!-- Sovereign AI Metadata -->
+```json
+{
+  "sovereign_metadata": {
+    "topic": "manga",
+    "subject": "{{Title}}",
+    "last_researched_date": "{{Date}}",
+    "route_used": "FULL",
+    "version": 1
+  }
+}
+```
