@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.venv\\\\Scripts\\\\python.exe -m py_compile agents/knowledge_chain.py)",
+      "Bash(.venv\\\\Scripts\\\\python.exe -m py_compile agents/commander.py)",
+      "Bash(.venv\\\\Scripts\\\\python.exe -m py_compile agents/prompts.py)"
+    ]
+  }
+}
